@@ -1,0 +1,34 @@
+{
+    "name": "Traefik Reverse Proxy",
+    "version": "0.1",
+    "slug": "traefik",
+    "description": "Reverse Proxy for Web Services",
+    "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
+    "startup": "system",
+    "boot": "auto",
+    "ports": {
+        "80/tcp": 80,
+        "443/tcp": 443
+    },
+    "map": [
+        "share:rw"
+    ],
+    "options": {
+        "email": "",
+        "httpreq": {
+            "url": "",
+            "username": "",
+            "password": ""
+        }
+    },
+    "ingress": true,
+    "panel_icon":"mdi:routes",
+    "schema": {
+        "email": "email",
+        "httpreq": {
+            "url": "str?",
+            "username": "str?",
+            "password": "str?"
+        }
+    }
+  }
