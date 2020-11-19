@@ -6,6 +6,7 @@
     "arch": ["armv7", "aarch64", "amd64"],
     "startup": "system",
     "boot": "auto",
+    "image": "pheelee/hassio-addon-traefik-{arch}",
     "ports": {
         "80/tcp": 80,
         "443/tcp": 443
