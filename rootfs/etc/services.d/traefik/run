@@ -4,17 +4,18 @@ ACME_EMAIL=$(bashio::config 'email')
 mkdir -p /data/dynamic.d
 
 HTTPREQ_ENDPOINT=$(bashio::config 'httpreq.url')
-DNSConfig=
+
+LOGLEVEL=$(bashio::config 'loglevel')
+
 if [ ! -z "$HTTPREQ_ENDPOINT" ]; then
     HTTPREQ_USERNAME=$(bashio::config 'httpreq.username')
     HTTPREQ_PASSWORD=$(bashio::config 'httpreq.password')
     traefik \
+    --log.level=$LOGLEVEL \
     --providers.file.directory=/data/dynamic.d \
     --serversTransport.insecureSkipVerify=true \
     --entryPoints.web.address=:80 \
     --entryPoints.websecure.address=:443 \
-    --entrypoints.web.http.redirections.entryPoint.to=websecure \
-    --entrypoints.web.http.redirections.entryPoint.scheme=https \
     --certificatesresolvers.http01.acme.email=$ACME_EMAIL \
     --certificatesresolvers.http01.acme.storage=/data/acme.json \
     --certificatesresolvers.http01.acme.httpchallenge.entrypoint=web \
@@ -24,12 +25,11 @@ if [ ! -z "$HTTPREQ_ENDPOINT" ]; then
     --certificatesresolvers.dns01.acme.storage=/data/acme.json
 else
     traefik \
+    --log.level=$LOGLEVEL \
     --providers.file.directory=/data/dynamic.d \
     --serversTransport.insecureSkipVerify=true \
     --entryPoints.web.address=:80 \
     --entryPoints.websecure.address=:443 \
-    --entrypoints.web.http.redirections.entryPoint.to=websecure \
-    --entrypoints.web.http.redirections.entryPoint.scheme=https \
     --certificatesresolvers.http01.acme.email=$ACME_EMAIL \
     --certificatesresolvers.http01.acme.storage=/data/acme.json \
     --certificatesresolvers.http01.acme.httpchallenge.entrypoint=web
