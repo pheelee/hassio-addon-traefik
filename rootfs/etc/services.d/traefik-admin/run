@@ -1,3 +1,5 @@
 #!/usr/bin/with-contenv bashio
 
+mkdir -p /data/dynamic.d
+
 /web/traefik-admin --ConfigPath /data/dynamic.d --WebRoot /web/webroot
