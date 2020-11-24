@@ -1,6 +1,6 @@
 {
     "name": "Traefik",
-    "version": "0.2",
+    "version": "0.3",
     "slug": "traefik",
     "description": "Reverse Proxy for Web Services",
     "arch": ["armv7", "aarch64", "amd64"],
@@ -19,7 +19,8 @@
             "url": "",
             "username": "",
             "password": ""
-        }
+        },
+        "insecureSkipVerify": false
     },
     "ingress": true,
     "panel_icon":"mdi:routes",
@@ -30,6 +31,7 @@
             "url": "str?",
             "username": "str?",
             "password": "str?"
-        }
+        },
+        "insecureSkipVerify": "bool"
     }
   }

@@ -7,13 +7,19 @@ HTTPREQ_ENDPOINT=$(bashio::config 'httpreq.url')
 
 LOGLEVEL=$(bashio::config 'loglevel')
 
+INSECURE_SKIP_VERIFY=$(bashio::config 'insecureSkipVerify')
+
+SKIP_VERIFY=""
+if [[ "$INSECURE_SKIP_VERIFY" = "true" ]]; then
+    SKIP_VERIFY="--serversTransport.insecureSkipVerify=true"
+fi
 if [ ! -z "$HTTPREQ_ENDPOINT" ]; then
     HTTPREQ_USERNAME=$(bashio::config 'httpreq.username')
     HTTPREQ_PASSWORD=$(bashio::config 'httpreq.password')
     traefik \
     --log.level=$LOGLEVEL \
+    $SKIP_VERIFY \
     --providers.file.directory=/data/dynamic.d \
-    --serversTransport.insecureSkipVerify=true \
     --entryPoints.web.address=:80 \
     --entryPoints.websecure.address=:443 \
     --certificatesresolvers.http01.acme.email=$ACME_EMAIL \
@@ -26,8 +32,8 @@ if [ ! -z "$HTTPREQ_ENDPOINT" ]; then
 else
     traefik \
     --log.level=$LOGLEVEL \
+    $SKIP_VERIFY \
     --providers.file.directory=/data/dynamic.d \
-    --serversTransport.insecureSkipVerify=true \
     --entryPoints.web.address=:80 \
     --entryPoints.websecure.address=:443 \
     --certificatesresolvers.http01.acme.email=$ACME_EMAIL \
