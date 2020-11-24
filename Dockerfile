@@ -32,7 +32,7 @@ RUN set -ex; \
                 x86_64) arch='amd64' ;; \
                 *) echo >&2 "error: unsupported architecture: $apkArch"; exit 1 ;; \
         esac; \
-        wget --quiet -O /tmp/traefik-admin.tar.gz "https://github.com/pheelee/traefik-admin/releases/download/v0.2/traefik-admin-linux-$arch.tar.gz"; \
+        wget --quiet -O /tmp/traefik-admin.tar.gz "https://github.com/pheelee/traefik-admin/releases/download/v0.3/traefik-admin-linux-$arch.tar.gz"; \
         mkdir -p /web; \
         tar xzvf /tmp/traefik-admin.tar.gz -C /web; \
         rm -f /tmp/traefik-admin.tar.gz; \
