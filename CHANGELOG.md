@@ -1,3 +1,8 @@
+## v0.4.1
+
+### 🛠️ Fixes
+- support multiple root ca's from config
+
 ## v0.4.0
 
 ### 🔨 Changes
