@@ -2,4 +2,14 @@
 
 mkdir -p /data/dynamic.d
 
-/web/traefik-admin --ConfigPath /data/dynamic.d --WebRoot /web/webroot
+HTTPREQ_ENDPOINT=$(bashio::config 'httpreq.url')
+HTTPREQ_USERNAME=$(bashio::config 'httpreq.username')
+HTTPREQ_PASSWORD=$(bashio::config 'httpreq.password')
+
+CERT_RESOLVER="http01"
+
+if [ ! -z "$HTTPREQ_ENDPOINT" ] && [ ! -z "$HTTPREQ_USERNAME" ] && [ ! -z "$HTTPREQ_PASSWORD" ]; then
+    CERT_RESOLVER="dns01"
+fi
+
+/web/traefik-admin --ConfigPath /data/dynamic.d --WebRoot /web/webroot --CertResolver $CERT_RESOLVER

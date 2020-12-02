@@ -4,6 +4,8 @@ ACME_EMAIL=$(bashio::config 'email')
 mkdir -p /data/dynamic.d
 
 HTTPREQ_ENDPOINT=$(bashio::config 'httpreq.url')
+HTTPREQ_USERNAME=$(bashio::config 'httpreq.username')
+HTTPREQ_PASSWORD=$(bashio::config 'httpreq.password')
 
 LOGLEVEL=$(bashio::config 'loglevel')
 
@@ -13,9 +15,23 @@ SKIP_VERIFY=""
 if [[ "$INSECURE_SKIP_VERIFY" = "true" ]]; then
     SKIP_VERIFY="--serversTransport.insecureSkipVerify=true"
 fi
-if [ ! -z "$HTTPREQ_ENDPOINT" ]; then
-    HTTPREQ_USERNAME=$(bashio::config 'httpreq.username')
-    HTTPREQ_PASSWORD=$(bashio::config 'httpreq.password')
+
+# Add root CAs
+mkdir -p /data/cacerts
+i=0
+CERTCMDLINE="--serversTransport.rootCAs="
+while read -r ca; do
+     echo "$ca" | sed -e 's/\s/\n/g' -e 's/\nCERT/ CERT/g' > "/data/cacerts/ca$i.crt"
+     CERTCMDLINE="${CERTCMDLINE}/data/cacerts/ca$i.crt,"
+    i=$(expr $i + 1)
+done <<< "$(bashio::config 'rootCAs')"
+
+CERTCMDLINE="${CERTCMDLINE%?}"
+
+if [ ! -z "$HTTPREQ_ENDPOINT" ] && [ ! -z "$HTTPREQ_USERNAME" ] && [ ! -z "$HTTPREQ_PASSWORD" ]; then
+    export HTTPREQ_ENDPOINT="$HTTPREQ_ENDPOINT"
+    export HTTPREQ_USERNAME="$HTTPREQ_USERNAME"
+    export HTTPREQ_PASSWORD="$HTTPREQ_PASSWORD"
     traefik \
     --log.level=$LOGLEVEL \
     $SKIP_VERIFY \
@@ -28,7 +44,8 @@ if [ ! -z "$HTTPREQ_ENDPOINT" ]; then
     --certificatesresolvers.dns01.acme.email=$ACME_EMAIL \
     --certificatesresolvers.dns01.acme.dnschallenge.provider=httpreq \
     --certificatesresolvers.dns01.acme.dnschallenge.delaybeforecheck=1 \
-    --certificatesresolvers.dns01.acme.storage=/data/acme.json
+    --certificatesresolvers.dns01.acme.storage=/data/acme.json \
+    $CERTCMDLINE
 else
     traefik \
     --log.level=$LOGLEVEL \
@@ -38,7 +55,8 @@ else
     --entryPoints.websecure.address=:443 \
     --certificatesresolvers.http01.acme.email=$ACME_EMAIL \
     --certificatesresolvers.http01.acme.storage=/data/acme.json \
-    --certificatesresolvers.http01.acme.httpchallenge.entrypoint=web
+    --certificatesresolvers.http01.acme.httpchallenge.entrypoint=web \
+    $CERTCMDLINE
 fi
 
 
