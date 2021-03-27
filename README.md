@@ -28,6 +28,7 @@ By using this addon you agree to the TOS of lets encrypt.
 * 🔒 HSTS
 * 🔠 Custom request headers
 * 🗝️ Basic auth
+* 🗝️ SSO using homeassistant api
 * 🚪 IP restriction
 
 ## Configuration
@@ -38,7 +39,11 @@ httpreq:
   url: ''
   username: ''
   password: ''
+authEndpoint: 'https://hass.example.com/auth/authorize'
+cookieSecret: aVerySecureStringHere
 insecureSkipVerify: false
+hosts:
+  - 192.168.1.1 foo.example.com
 rootCAs: []
 ```
 ### Option: ```loglevel```
@@ -65,10 +70,24 @@ The `email` option is required for the registration with the lets encrypt servic
 This option sets the necessary variables and cert resolver to dns01.
 Please refer the official documentation from traefik for further details https://doc.traefik.io/traefik/https/acme/#dnschallenge
 
+### Option: ```authEndpoint```
+This option enables the forward auth feature. With this feature you can secure any proxy entry with the homeassistant login system.
+It also works as single sign on (SSO) solution for all proxy entries sharing the forward auth config.
+
+### Option: ```cookieSecret```
+This should be a very random value used for encryption of the cookies for forward auth.
+
 ### Option: ```insecureSkipVerify```
 Skip verification of ssl certs on backends. Useful if you proxy to a tls/ssl backend with a self signed certificate
 Try to leave this settings to `false` and provide necessary root CAs.
 Please refer the official documentation from traefik for further details https://doc.traefik.io/traefik/routing/overview/#insecureskipverify
+
+### Option: ```hosts```
+Writes the entries to the hosts file.
+Format
+```
+192.168.1.1 foo.example.com
+```
 
 ### Option: ```rootCAs```
 Specifies a list of root CAs as base64 strings to import in traefik.
@@ -77,7 +96,7 @@ Specifies a list of root CAs as base64 strings to import in traefik.
 
 MIT License
 
-Copyright (c) 2020 Philipp Ritter
+Copyright (c) 2021 Philipp Ritter
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

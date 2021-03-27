@@ -1,6 +1,6 @@
 {
     "name": "Traefik",
-    "version": "0.4.1",
+    "version": "0.5.0",
     "slug": "traefik",
     "description": "Reverse Proxy for Web Services",
     "arch": ["armv7", "aarch64", "amd64"],
@@ -20,6 +20,8 @@
             "username": "",
             "password": ""
         },
+        "authEndpoint": "",
+        "cookieSecret": "your-super-secure-string-here",
         "insecureSkipVerify": false,
         "rootCAs": []
     },
@@ -33,6 +35,8 @@
             "username": "str?",
             "password": "str?"
         },
+        "authEndpoint": "str?",
+        "cookieSecret": "str?",
         "insecureSkipVerify": "bool",
         "rootCAs": ["str"]
     }

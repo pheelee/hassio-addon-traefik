@@ -12,4 +12,7 @@ if [ ! -z "$HTTPREQ_ENDPOINT" ] && [ ! -z "$HTTPREQ_USERNAME" ] && [ ! -z "$HTTP
     CERT_RESOLVER="dns01"
 fi
 
-/web/traefik-admin --ConfigPath /data/dynamic.d --WebRoot /web/webroot --CertResolver $CERT_RESOLVER
+AUTH_ENDPOINT=$(bashio::config 'authEndpoint')
+COOKIE_SECRET=$(bashio::config 'cookieSecret')
+
+/web/traefik-admin --ConfigPath /data/dynamic.d --WebRoot /web/webroot --CertResolver $CERT_RESOLVER --AuthEndpoint $AUTH_ENDPOINT --CookieSecret $COOKIE_SECRET
