@@ -1,3 +1,10 @@
+## v0.5.1
+
+### 🛠️ Fixes
+
+- fix webinterface startup error if no authEndpoint is specified
+- add hosts entries
+
 ## v0.5.0
 
 ### 🔨 Changes

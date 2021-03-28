@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bashio
+
+for c in $(cat /data/options.json | jq -r '.hosts[] | @base64'); do
+   echo "`echo $c | base64 -d`" >> "/etc/hosts"
+done
