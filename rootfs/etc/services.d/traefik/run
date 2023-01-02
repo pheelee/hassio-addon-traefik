@@ -3,10 +3,6 @@
 ACME_EMAIL=$(bashio::config 'email')
 mkdir -p /data/dynamic.d
 
-HTTPREQ_ENDPOINT=$(bashio::config 'httpreq.url')
-HTTPREQ_USERNAME=$(bashio::config 'httpreq.username')
-HTTPREQ_PASSWORD=$(bashio::config 'httpreq.password')
-
 LOGLEVEL=$(bashio::config 'loglevel')
 
 INSECURE_SKIP_VERIFY=$(bashio::config 'insecureSkipVerify')
@@ -17,7 +13,9 @@ if [[ "$INSECURE_SKIP_VERIFY" = "true" ]]; then
 fi
 
 # Add root CAs
-rm -r /data/cacerts
+if [  -d /data/cacerts ];then
+    rm -r /data/cacerts
+fi
 mkdir -p /data/cacerts
 i=0
 CERTCMDLINE="--serversTransport.rootCAs="
@@ -28,12 +26,19 @@ for c in $(cat /data/options.json | jq -r '.rootCAs[] | @base64'); do
    i=$(expr $i + 1)
 done
 
-CERTCMDLINE="${CERTCMDLINE%?}"
+# Set environment variables (mostly used for dns challenge configuration)
+for c in $(bashio::config 'environment'); do
+    IFS='=' read -ra ENVLINE <<< $c
+    export "${ENVLINE[0]}"="${ENVLINE[1]}"
+done
 
-if [ ! -z "$HTTPREQ_ENDPOINT" ] && [ ! -z "$HTTPREQ_USERNAME" ] && [ ! -z "$HTTPREQ_PASSWORD" ]; then
-    export HTTPREQ_ENDPOINT="$HTTPREQ_ENDPOINT"
-    export HTTPREQ_USERNAME="$HTTPREQ_USERNAME"
-    export HTTPREQ_PASSWORD="$HTTPREQ_PASSWORD"
+CERTCMDLINE="${CERTCMDLINE%?}"
+# If we dont have any cert CAs we empty the variale
+if [[ "$CERTCMDLINE" = "--serversTransport.rootCAs" ]]; then
+    CERTCMDLINE=
+fi
+
+if [ ! -z "$DNS_PROVIDER" ]; then
     traefik \
     --log.level=$LOGLEVEL \
     $SKIP_VERIFY \
@@ -44,8 +49,9 @@ if [ ! -z "$HTTPREQ_ENDPOINT" ] && [ ! -z "$HTTPREQ_USERNAME" ] && [ ! -z "$HTTP
     --certificatesresolvers.http01.acme.storage=/data/acme.json \
     --certificatesresolvers.http01.acme.httpchallenge.entrypoint=web \
     --certificatesresolvers.dns01.acme.email=$ACME_EMAIL \
-    --certificatesresolvers.dns01.acme.dnschallenge.provider=httpreq \
-    --certificatesresolvers.dns01.acme.dnschallenge.delaybeforecheck=1 \
+    --certificatesresolvers.dns01.acme.dnschallenge.provider=$DNS_PROVIDER \
+    --certificatesresolvers.dns01.acme.dnschallenge.delaybeforecheck=2 \
+    --certificatesresolvers.dns01.acme.dnschallenge.disablepropagationcheck=true \
     --certificatesresolvers.dns01.acme.storage=/data/acme.json \
     $CERTCMDLINE
 else
@@ -60,5 +66,3 @@ else
     --certificatesresolvers.http01.acme.httpchallenge.entrypoint=web \
     $CERTCMDLINE
 fi
-
-

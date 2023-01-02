@@ -1,28 +1,27 @@
 {
     "name": "Traefik",
-    "version": "0.5.1",
+    "version": "0.5.3",
     "slug": "traefik",
     "description": "Reverse Proxy for Web Services",
     "arch": ["armv7", "aarch64", "amd64"],
     "startup": "system",
     "boot": "auto",
-    "image": "pheelee/hassio-addon-traefik-{arch}",
+    "init": false,
+    
     "ports": {
         "80/tcp": 80,
         "443/tcp": 443
     },
+    "hassio_api": false,
+    "hassio_role": "default",
     "map": [],
     "options": {
         "loglevel": "error",
         "email": "",
-        "httpreq": {
-            "url": "",
-            "username": "",
-            "password": ""
-        },
         "authEndpoint": "",
         "cookieSecret": "your-super-secure-string-here",
         "insecureSkipVerify": false,
+        "environment": [],
         "hosts":[],
         "rootCAs": []
     },
@@ -31,15 +30,11 @@
     "schema": {
         "loglevel": "list(debug|panic|fatal|error|warn|info)",
         "email": "email",
-        "httpreq": {
-            "url": "str?",
-            "username": "str?",
-            "password": "str?"
-        },
         "authEndpoint": "str?",
         "cookieSecret": "str?",
         "insecureSkipVerify": "bool",
-        "hosts": ["str"],
-        "rootCAs": ["str"]
+        "environment":["str?"],
+        "hosts": ["str?"],
+        "rootCAs": ["str?"]
     }
   }

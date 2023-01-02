@@ -1,3 +1,21 @@
+## v0.5.3
+
+### 🛠️ Fixes
+
+### 🔨 Changes
+- Bump Traefik to v2.9.6
+
+## v0.5.2
+
+### 🛠️ Fixes
+
+- add init:false to config to support s6 3.x
+
+### 🔨 Changes
+
+- Bump Traefik to v2.7.0
+- removed httpreq config options in favor of environment where any arbitrary variable can be set
+
 ## v0.5.1
 
 ### 🛠️ Fixes

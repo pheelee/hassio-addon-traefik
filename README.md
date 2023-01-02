@@ -35,13 +35,12 @@ By using this addon you agree to the TOS of lets encrypt.
 ```
 loglevel: error
 email: webmaster@example.ch
-httpreq:
-  url: ''
-  username: ''
-  password: ''
 authEndpoint: 'https://hass.example.com/auth/authorize'
 cookieSecret: aVerySecureStringHere
 insecureSkipVerify: false
+environment:
+  - DNS_PROVIDER=cloudflare
+  - CF_DNS_API_TOKEN=12345
 hosts:
   - 192.168.1.1 foo.example.com
 rootCAs: []
@@ -67,6 +66,7 @@ you are troubleshooting.
 The `email` option is required for the registration with the lets encrypt service.
 
 ### Option: ```httpreq```
+**removed**
 This option sets the necessary variables and cert resolver to dns01.
 Please refer the official documentation from traefik for further details https://doc.traefik.io/traefik/https/acme/#dnschallenge
 
@@ -82,9 +82,18 @@ Skip verification of ssl certs on backends. Useful if you proxy to a tls/ssl bac
 Try to leave this settings to `false` and provide necessary root CAs.
 Please refer the official documentation from traefik for further details https://doc.traefik.io/traefik/routing/overview/#insecureskipverify
 
+### Option: ```environment```
+Sets the specified environment variables. This can be used to provider information for the dns challenge provider.
+Use the variable ```DNS_PROVIDER``` to specify the provider.
+More information can be found at https://doc.traefik.io/traefik/https/acme/#providers
+
+```
+DNS_PROVIDER=cloudflare
+CF_DNS_API_TOKEN=12345
+```
+
 ### Option: ```hosts```
 Writes the entries to the hosts file.
-Format
 ```
 192.168.1.1 foo.example.com
 ```
@@ -96,7 +105,7 @@ Specifies a list of root CAs as base64 strings to import in traefik.
 
 MIT License
 
-Copyright (c) 2021 Philipp Ritter
+Copyright (c) 2021-2022 Philipp Ritter
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -120,7 +129,7 @@ SOFTWARE.
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
 [armv7-shield]: https://img.shields.io/badge/armv7-yes-green.svg
 [license-shield]: https://img.shields.io/github/license/pheelee/hassio-addon-traefik.svg
-[maintenance-shield]: https://img.shields.io/maintenance/yes/2020.svg
+[maintenance-shield]: https://img.shields.io/maintenance/yes/2023.svg
 [project-stage-shield]: https://img.shields.io/badge/project%20stage-stable-green.svg
 [releases-shield]: https://img.shields.io/github/release/pheelee/hassio-addon-traefik.svg
 [releases]: https://github.com/pheelee/hassio-addon-traefik/releases

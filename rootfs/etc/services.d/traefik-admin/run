@@ -19,4 +19,4 @@ if [ ! -z "$AUTH_ENDPOINT" ]; then
     AUTH_ENDPOINT="--AuthEndpoint $AUTH_ENDPOINT"
 fi
 
-/web/traefik-admin --ConfigPath /data/dynamic.d --WebRoot /web/webroot --CertResolver $CERT_RESOLVER $AUTH_ENDPOINT --CookieSecret $COOKIE_SECRET
+/web/traefik-admin --ConfigPath /data/dynamic.d --CertResolver $CERT_RESOLVER $AUTH_ENDPOINT --CookieSecret $COOKIE_SECRET
