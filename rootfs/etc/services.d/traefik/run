@@ -51,7 +51,7 @@ if [ ! -z "$DNS_PROVIDER" ]; then
     --certificatesresolvers.dns01.acme.email=$ACME_EMAIL \
     --certificatesresolvers.dns01.acme.dnschallenge.provider=$DNS_PROVIDER \
     --certificatesresolvers.dns01.acme.dnschallenge.delaybeforecheck=2 \
-    --certificatesresolvers.dns01.acme.dnschallenge.disablepropagationcheck=true \
+#    --certificatesresolvers.dns01.acme.dnschallenge.disablepropagationcheck=true \
     --certificatesresolvers.dns01.acme.storage=/data/acme.json \
     $CERTCMDLINE
 else
