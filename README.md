@@ -129,8 +129,9 @@ SOFTWARE.
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
 [armv7-shield]: https://img.shields.io/badge/armv7-yes-green.svg
 [license-shield]: https://img.shields.io/github/license/pheelee/hassio-addon-traefik.svg
-[maintenance-shield]: https://img.shields.io/maintenance/yes/2023.svg
+[maintenance-shield]: https://img.shields.io/maintenance/yes/2024.svg
 [project-stage-shield]: https://img.shields.io/badge/project%20stage-stable-green.svg
 [releases-shield]: https://img.shields.io/github/release/pheelee/hassio-addon-traefik.svg
 [releases]: https://github.com/pheelee/hassio-addon-traefik/releases
 [repository]: https://github.com/pheelee/hassio
+
