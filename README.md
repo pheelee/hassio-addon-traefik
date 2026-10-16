@@ -190,8 +190,8 @@ The companion catalog workflow uses `UPDATER_TOKEN` and the community
 `repository-updater` library to retain the existing stable and beta entries and
 add an edge entry in the same catalog. Stable releases refresh stable and beta;
 prereleases refresh beta; main builds refresh edge. Merge the catalog integration
-PR and configure its token before deploying this pipeline. The prepared changes
-are available in [the catalog integration patch](integration/README.md).
+PR and configure its token before deploying this pipeline. The companion integration is
+[pheelee/hassio#2](https://github.com/pheelee/hassio/pull/2).
 
 Pinned community workflows also synchronize labels, enforce PR category labels
 and maintain a release draft on `main`. `.github/release-drafter.yml` defines
