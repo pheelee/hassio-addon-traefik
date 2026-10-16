@@ -2,21 +2,20 @@
 
 mkdir -p /data/dynamic.d
 
-HTTPREQ_ENDPOINT=$(bashio::config 'httpreq.url')
-HTTPREQ_USERNAME=$(bashio::config 'httpreq.username')
-HTTPREQ_PASSWORD=$(bashio::config 'httpreq.password')
-
 CERT_RESOLVER="http01"
-
-if [ ! -z "$HTTPREQ_ENDPOINT" ] && [ ! -z "$HTTPREQ_USERNAME" ] && [ ! -z "$HTTPREQ_PASSWORD" ]; then
-    CERT_RESOLVER="dns01"
-fi
+# Match the DNS provider configured for Traefik through the environment option.
+while IFS= read -r setting; do
+    if [[ "$setting" == DNS_PROVIDER=* && -n "${setting#DNS_PROVIDER=}" ]]; then
+        CERT_RESOLVER="dns01"
+    fi
+done < <(bashio::config 'environment')
 
 AUTH_ENDPOINT=$(bashio::config 'authEndpoint')
 COOKIE_SECRET=$(bashio::config 'cookieSecret')
 
-if [ ! -z "$AUTH_ENDPOINT" ]; then
-    AUTH_ENDPOINT="--AuthEndpoint $AUTH_ENDPOINT"
+ARGS=(--ConfigPath /data/dynamic.d --CertResolver "$CERT_RESOLVER" --CookieSecret "$COOKIE_SECRET")
+if [ -n "$AUTH_ENDPOINT" ]; then
+    ARGS+=(--AuthEndpoint "$AUTH_ENDPOINT")
 fi
 
-/web/traefik-admin --ConfigPath /data/dynamic.d --CertResolver $CERT_RESOLVER $AUTH_ENDPOINT --CookieSecret $COOKIE_SECRET
+exec /web/traefik-admin "${ARGS[@]}"

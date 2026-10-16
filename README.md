@@ -101,6 +101,52 @@ Writes the entries to the hosts file.
 ### Option: ```rootCAs```
 Specifies a list of root CAs as base64 strings to import in traefik.
 
+## Development and dependency updates
+
+This repository owns the packaged Traefik version, the released traefik-admin
+version, Home Assistant base images and CI actions. Renovate tracks these in its
+Dependency Dashboard and opens reviewable PRs; automerge is disabled and major
+updates require dashboard approval. The admin repository independently owns its
+Go and frontend dependencies. Only published admin releases are consumed here.
+
+`Dockerfile` declares upstream release versions. Both archives must match their
+publisher's SHA-256 manifest before extraction. `build.json` pins a base version
+and digest for each supported architecture; Renovate groups their updates.
+Architecture-specific bases preserve ARMv7 support, which is absent from the new
+consolidated Home Assistant base image. CI must pass for every architecture when
+updating these bases. Traefik remains on 2.9.6 pending a separate compatibility
+and security upgrade; adding tracking does not resolve advisories in that version.
+
+Run the checksum tests and build a native development image:
+
+```sh
+python3 -m unittest discover -s tests -v
+base=$(python3 scripts/image-metadata.py amd64 | sed -n 's/^base=//p')
+docker buildx build --load --build-arg BUILD_FROM="$base" -t traefik-addon-test:amd64 .
+admin_version=$(python3 scripts/image-metadata.py amd64 | sed -n 's/^admin_version=//p')
+python3 scripts/smoke-test.py traefik-addon-test:amd64 --expected-version "$admin_version"
+```
+
+Use `aarch64` / `linux/arm64` or `armv7` / `linux/arm/v7` with the corresponding
+base and `--platform` to build another architecture. Cross-platform builds and
+container tests require QEMU/binfmt support. In an environment with a private
+HTTPS proxy CA, pass `--secret id=build_ca,src=/path/to/trusted-ca-bundle.pem` to
+the build. This adds build-time trust without putting that CA in the final image.
+
+The shared build workflow tests checksum rejection, boots each architecture's
+image and verifies admin version, UI loading, backend health and route creation
+and deletion through Traefik. A minimal Supervisor API fixture supplies test
+options; no real Supervisor credentials are used. It uses native amd64/arm64 runners and emulates
+ARMv7. These checks do not issue ACME certificates or exercise Home Assistant
+Supervisor ingress or external SSO.
+
+To release, update `config.json` and `CHANGELOG.md`, merge the reviewed PR, then
+publish a GitHub release whose tag matches the add-on version (with an optional
+`v` prefix). The publish workflow uses the same build and smoke tests before
+pushing versioned Docker Hub images. It requires the existing
+`DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets. An admin release
+alone does not publish an add-on image.
+
 ## License
 
 MIT License

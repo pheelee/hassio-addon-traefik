@@ -1,6 +1,35 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "dependencyDashboard": true,
+  "enabledManagers": ["dockerfile", "github-actions", "custom.regex"],
+  "automerge": false,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^Dockerfile$/"],
+      "matchStrings": ["# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+_VERSION=(?<currentValue>\\S+)"],
+      "extractVersionTemplate": "^v(?<version>.*)$",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^build\\.json$/"],
+      "matchStrings": ["\"(?<depName>ghcr\\.io/home-assistant/[^\"]+):(?<currentValue>[0-9.]+)@(?<currentDigest>sha256:[a-f0-9]+)\""],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Review compatibility before any major dependency upgrade",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Keep base versions and digests consistent across all architectures",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["/^ghcr\\.io/home-assistant/.*-base$/"],
+      "groupName": "Home Assistant base images"
+    }
   ]
 }

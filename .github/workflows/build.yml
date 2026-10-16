@@ -1,0 +1,122 @@
+name: Build images
+
+on:
+  workflow_call:
+    inputs:
+      publish:
+        type: boolean
+        default: false
+      release_tag:
+        type: string
+        default: ''
+    secrets:
+      DOCKERHUB_USERNAME:
+        required: false
+      DOCKERHUB_TOKEN:
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Test checksum verification
+        run: python3 -m unittest discover -s tests -v
+  build:
+    name: Build and smoke test (${{ matrix.arch }})
+    needs: verify
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+          - arch: armv7
+            platform: linux/arm/v7
+            runner: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Read image metadata and validate release version
+        id: metadata
+        env:
+          BUILD_ARCH: ${{ matrix.arch }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: python3 scripts/image-metadata.py "$BUILD_ARCH" "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+      - name: Set up ARMv7 emulation
+        if: matrix.arch == 'armv7'
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+        with:
+          platforms: arm
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build test image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          build-args: BUILD_FROM=${{ steps.metadata.outputs.base }}
+          load: true
+          tags: traefik-addon-test:${{ matrix.arch }}
+          cache-from: type=gha,scope=${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+      - name: Boot add-on and test routing
+        env:
+          BUILD_ARCH: ${{ matrix.arch }}
+          ADMIN_VERSION: ${{ steps.metadata.outputs.admin_version }}
+        run: python3 scripts/smoke-test.py "traefik-addon-test:$BUILD_ARCH" --expected-version "$ADMIN_VERSION"
+      - name: Save tested release image
+        if: inputs.publish
+        env:
+          BUILD_ARCH: ${{ matrix.arch }}
+        run: docker save "traefik-addon-test:$BUILD_ARCH" | gzip > /tmp/tested-image.tar.gz
+      - name: Retain tested release image
+        if: inputs.publish
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: tested-image-${{ matrix.arch }}
+          path: /tmp/tested-image.tar.gz
+          compression-level: 0
+          retention-days: 1
+  publish:
+    name: Publish (${{ matrix.arch }})
+    if: inputs.publish
+    needs: build
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, aarch64, armv7]
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Read release metadata
+        id: metadata
+        env:
+          BUILD_ARCH: ${{ matrix.arch }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: python3 scripts/image-metadata.py "$BUILD_ARCH" "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: tested-image-${{ matrix.arch }}
+          path: /tmp/tested-image
+      - name: Load tested image
+        run: docker load --input /tmp/tested-image/tested-image.tar.gz
+      - name: Log in to Docker Hub
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Publish tested image
+        # Push the exact image that passed; all architectures must pass first.
+        env:
+          LOCAL_IMAGE: traefik-addon-test:${{ matrix.arch }}
+          PUBLISH_IMAGE: ${{ steps.metadata.outputs.image }}:${{ steps.metadata.outputs.version }}
+        run: |
+          docker tag "$LOCAL_IMAGE" "$PUBLISH_IMAGE"
+          docker push "$PUBLISH_IMAGE"

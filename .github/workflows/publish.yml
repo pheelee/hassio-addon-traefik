@@ -1,26 +1,18 @@
-name: 'Publish'
+name: Publish
 
 on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
 jobs:
   publish:
-    name: Publish
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout the repository
-      uses: actions/checkout@v5
-    - name: Login to DockerHub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-    - name: Publish
-      uses: home-assistant/builder@master
-      with:
-        args: |
-          --armv7 \
-          --amd64 \
-          --aarch64 \
-          --target /data
+    uses: ./.github/workflows/build.yml
+    with:
+      publish: true
+      release_tag: ${{ github.event.release.tag_name }}
+    secrets:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}

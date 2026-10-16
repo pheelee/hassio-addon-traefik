@@ -38,7 +38,7 @@ if [[ "$CERTCMDLINE" = "--serversTransport.rootCAs" ]]; then
     CERTCMDLINE=
 fi
 
-if [ ! -z "$DNS_PROVIDER" ]; then
+if [ -n "${DNS_PROVIDER:-}" ]; then
     traefik \
     --log.level=$LOGLEVEL \
     $SKIP_VERIFY \

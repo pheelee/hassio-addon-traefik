@@ -1,3 +1,11 @@
+## v0.5.5
+
+- Update traefik-admin to v0.5.3 with security fixes and self-hosted icons.
+- Verify Traefik and admin release checksums before installing binaries.
+- Track upstream releases, pinned Home Assistant bases and GitHub Actions with Renovate.
+- Fix startup with no DNS provider and select the admin certificate resolver from current options.
+- Build and smoke-test all supported architectures before publishing images.
+
 ## v0.5.3
 
 ### 🛠️ Fixes
