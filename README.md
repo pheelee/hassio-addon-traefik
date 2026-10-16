@@ -164,6 +164,14 @@ environment with a private HTTPS proxy CA, pass
 `--secret id=build_ca,src=/path/to/trusted-ca-bundle.pem` to the build; that CA is
 available only during downloads and is absent from the final image.
 
+### Running dependency updates
+
+The `Renovate` workflow runs daily and can also be started manually from GitHub
+Actions. Follow [the runner setup](.github/RENOVATE.md) to configure
+`RENOVATE_TOKEN` and disable the hosted Renovate App for this repository before
+the first run. Existing dependency groups, major-update approvals and merge
+policies remain in `renovate.json`; update commits use Conventional Commits.
+
 ### Deployment and maintenance
 
 The pinned community `app-deploy.yaml` runs after both community CI and our

@@ -59,6 +59,6 @@
   ],
   "rebaseWhen": "behind-base-branch",
   "labels": ["dependencies", "no-stale"],
-  "commitMessagePrefix": "\u2b06\ufe0f",
+  "semanticCommits": "enabled",
   "platformAutomerge": false
 }
