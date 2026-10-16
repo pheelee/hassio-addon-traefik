@@ -1,6 +1,64 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ]
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "dependencyDashboard": true,
+  "enabledManagers": [
+    "dockerfile",
+    "github-actions",
+    "custom.regex",
+    "pip_requirements"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^traefik/Dockerfile$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+_VERSION=(?<currentValue>\\S+)"
+      ],
+      "extractVersionTemplate": "^v(?<version>.*)$",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^traefik/build\\.yaml$/"],
+      "matchStrings": [
+        "(?:aarch64|amd64):\\s+(?<depName>ghcr\\.io/hassio-addons/base):(?<currentValue>[0-9.]+)"
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Keep base versions consistent across supported architectures",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/hassio-addons/base"],
+      "groupName": "App base image"
+    },
+    {
+      "description": "Community policy: automatically merge compatible base updates after CI",
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "description": "Community policy: automatically merge compatible upstream application updates after CI",
+      "matchDatasources": ["github-releases"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "description": "Keep major upgrades explicit",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "matchManagers": ["pip_requirements"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    }
+  ],
+  "rebaseWhen": "behind-base-branch",
+  "labels": ["dependencies", "no-stale"],
+  "commitMessagePrefix": "\u2b06\ufe0f",
+  "platformAutomerge": false
 }

@@ -1,0 +1,21 @@
+#!/usr/bin/with-contenv bashio
+
+mkdir -p /data/dynamic.d
+
+CERT_RESOLVER="http01"
+# Match the DNS provider configured for Traefik through the environment option.
+while IFS= read -r setting; do
+    if [[ "$setting" == DNS_PROVIDER=* && -n "${setting#DNS_PROVIDER=}" ]]; then
+        CERT_RESOLVER="dns01"
+    fi
+done < <(bashio::config 'environment')
+
+AUTH_ENDPOINT=$(bashio::config 'authEndpoint')
+COOKIE_SECRET=$(bashio::config 'cookieSecret')
+
+ARGS=(--ConfigPath /data/dynamic.d --CertResolver "$CERT_RESOLVER" --CookieSecret "$COOKIE_SECRET")
+if [ -n "$AUTH_ENDPOINT" ]; then
+    ARGS+=(--AuthEndpoint "$AUTH_ENDPOINT")
+fi
+
+exec /web/traefik-admin "${ARGS[@]}"

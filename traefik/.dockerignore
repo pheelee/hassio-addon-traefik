@@ -1,0 +1,7 @@
+*
+!Dockerfile
+!scripts/
+scripts/*
+!scripts/verify-sha256.sh
+!rootfs/
+!rootfs/**
