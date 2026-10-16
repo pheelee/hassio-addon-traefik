@@ -19,22 +19,29 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - name: Require a Renovate credential
+      - name: Create repository-scoped GitHub App token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: generate-app-token
         env:
-          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
-        run: |
-          if test -z "$RENOVATE_TOKEN"; then
-            echo 'Configure the RENOVATE_TOKEN repository secret.' >&2
-            exit 1
-          fi
+          NODE_USE_ENV_PROXY: "1"
+        with:
+          client-id: ${{ vars.GHA_IRBE_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.GHA_IRBE_AUTOMATION_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          permission-workflows: write
+          permission-checks: read
+          permission-statuses: read
       - name: Run Renovate for this repository
         uses: renovatebot/github-action@f0f41e5f2e706165f6814b1d0f0d0e319de7d1d9 # v46.3.8
         with:
-          token: ${{ secrets.RENOVATE_TOKEN }}
+          token: ${{ steps.generate-app-token.outputs.token }}
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_ONBOARDING: "false"
           RENOVATE_REQUIRE_CONFIG: required
           RENOVATE_BRANCH_PREFIX: renovate-actions/
-          RENOVATE_GIT_AUTHOR: pheelee <pri@irbe.ch>
           RENOVATE_IGNORE_SCRIPTS: "true"
