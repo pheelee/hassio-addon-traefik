@@ -167,7 +167,9 @@ available only during downloads and is absent from the final image.
 ### Deployment and maintenance
 
 The pinned community `app-deploy.yaml` runs after both community CI and our
-runtime tests pass. It publishes:
+runtime tests pass. A read-only GitHub comparison also checks that the triggering
+commit belongs to main history before the catalog credential check or deployment
+starts. Version and channel handling stay in the shared workflow. It publishes:
 
 - `ghcr.io/pheelee/traefik/{arch}:<version>` for each supported architecture;
 - `ghcr.io/pheelee/traefik:<version>` as a multi-architecture manifest;
@@ -178,19 +180,6 @@ Edge versions use the short source commit; release versions come from the GitHub
 tag, without its optional `v` prefix. The source config stays at `dev`. Release Drafter proposes the next
 version from PR labels. Publish its tag as a stable release or use a prerelease
 tag such as `v1.0.0-rc.1` for a beta. An admin release alone does not release the add-on.
-
-Before the catalog credential check or deployment starts, a read-only source
-gate runs the validation script from protected `main`. Edge builds must use the
-current main commit. Release tags must resolve to the triggering commit in main
-history; tags use lowercase semantic versions and the GitHub prerelease flag
-must match a prerelease suffix. Old edge runs must be replaced with a fresh main
-build rather than rerun after main advances.
-
-This gate protects the configured workflow. An actor able to replace a workflow
-can also remove its checks, so preserve main protection and immutable version
-tags, restrict release access, and scope `DISPATCH_TOKEN` to the catalog only.
-The shared deployment rebuilds images after runtime tests; this does not establish
-cryptographic proof that a published image is identical to the tested image.
 
 The deployment workflow uses `GITHUB_TOKEN` with `packages: write` for GHCR;
 Docker Hub credentials are no longer used. After first publication, make the
