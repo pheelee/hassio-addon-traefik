@@ -186,12 +186,15 @@ The repository owner must set this in GitHub package settings.
 
 The community deployment dispatches catalog updates to `pheelee/hassio` using a
 `DISPATCH_TOKEN` repository secret with Contents write access to that repository.
-The companion catalog workflow uses `UPDATER_TOKEN` and the community
-`repository-updater` library to retain the existing stable and beta entries and
-add an edge entry in the same catalog. Stable releases refresh stable and beta;
-prereleases refresh beta; main builds refresh edge. Merge the catalog integration
-PR and configure its token before deploying this pipeline. The companion integration is
-[pheelee/hassio#2](https://github.com/pheelee/hassio/pull/2).
+The companion catalog workflow prepares source files as data in a read-only job,
+rejecting symlinks, path escapes and source templates. A separate publisher
+validates the candidate and uses the short-lived repository `GITHUB_TOKEN` only
+for its final push. No `UPDATER_TOKEN` PAT or community updater library is used;
+remove/revoke a PAT created solely for that obsolete secret. Stable releases
+refresh stable and beta; prereleases refresh beta; main builds refresh edge.
+Merge [the catalog integration PR](https://github.com/pheelee/hassio/pull/2)
+and configure the source-side `DISPATCH_TOKEN` before deploying this pipeline.
+The catalog listens for dispatches, not its own pushes, preventing an updater loop.
 
 Pinned community workflows also synchronize labels, enforce PR category labels
 and maintain a release draft on `main`. `.github/release-drafter.yml` defines
