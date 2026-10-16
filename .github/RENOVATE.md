@@ -9,8 +9,9 @@ Authentication follows [pheelee/cat](https://github.com/pheelee/cat/blob/main/.g
 using the `irbe-automation` GitHub App:
 
 1. Ensure the App is installed with access to this repository. It needs Contents,
-   Pull requests, Issues and Workflows write access, plus Checks and Commit
-   statuses read access. Workflows write access allows Actions dependency updates.
+   Pull requests, Issues and Workflows write access, plus Commit statuses read
+   access. Checks permission is not requested. Workflows write access allows
+   Actions dependency updates.
 2. Make the App client ID available as the Actions variable
    `GHA_IRBE_AUTOMATION_APP_ID` and its private key as the Actions secret
    `GHA_IRBE_AUTOMATION_APP_PRIVATE_KEY`, using the same values as `cat`.

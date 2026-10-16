@@ -33,7 +33,6 @@ jobs:
           permission-pull-requests: write
           permission-issues: write
           permission-workflows: write
-          permission-checks: read
           permission-statuses: read
       - name: Run Renovate for this repository
         uses: renovatebot/github-action@f0f41e5f2e706165f6814b1d0f0d0e319de7d1d9 # v46.3.8
