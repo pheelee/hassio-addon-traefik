@@ -3,27 +3,29 @@
 The `Renovate` workflow runs daily and can be started from **Actions → Renovate →
 Run workflow** on `main`. It updates only this repository, using `renovate.json`.
 Existing major-update approvals and merge policies remain in effect. Update
-commits use Conventional Commits and the author `pheelee <pri@irbe.ch>`.
+commits use Conventional Commits.
 
-Before the first run:
+Authentication follows [pheelee/cat](https://github.com/pheelee/cat/blob/main/.github/workflows/renovate.yml),
+using the `irbe-automation` GitHub App:
 
-1. Disable the hosted Renovate App for this repository to avoid duplicate update
-   PRs. Existing App-created PRs remain available for manual review; this runner
-   uses `renovate-actions/` branches so it does not modify the App's branches.
-2. Create a fine-grained PAT for the account `pheelee`, restricted to the
-   repositories this runner should maintain. Grant Contents, Pull requests,
-   Issues and Workflows read/write access, plus Checks and Commit statuses read
-   access. Workflows write access allows GitHub Actions dependency updates.
-3. Store the PAT as the repository Actions secret `RENOVATE_TOKEN`, then run the
-   workflow manually. Set an expiry and rotate it before expiry. Do not put the
-   token in a config file, issue, PR or workflow input.
+1. Ensure the App is installed with access to this repository. It needs Contents,
+   Pull requests, Issues and Workflows write access, plus Checks and Commit
+   statuses read access. Workflows write access allows Actions dependency updates.
+2. Make the App client ID available as the Actions variable
+   `GHA_IRBE_AUTOMATION_APP_ID` and its private key as the Actions secret
+   `GHA_IRBE_AUTOMATION_APP_PRIVATE_KEY`, using the same values as `cat`.
+3. Disable the separate hosted Renovate App for this repository to avoid
+   duplicate updates. Keep `irbe-automation` installed. Existing hosted-App PRs
+   remain available for review; this runner uses `renovate-actions/` branches.
+4. Run the workflow manually after merging it.
 
-The default `GITHUB_TOKEN` is unsuitable here because dependency PRs it creates
-would not trigger the required PR workflows. The PAT allows those CI runs. The
-Renovate runner itself listens only to its schedule and manual dispatch, so those
-PR events do not create a workflow loop.
+The token action generates a short-lived installation token restricted to this
+repository and revokes it when the job finishes. A `RENOVATE_TOKEN` PAT is not
+needed. App-created dependency PRs can trigger the required CI workflows. The
+Renovate runner itself listens only to its schedule and manual dispatch.
 
-The runner has no checkout step, runs only on `main`, disables package scripts,
-and receives no other repository secrets. This is self-hosted Renovate in GitHub
-Actions; it is an alternative to the hosted App used by the community repos.
-No signing key is configured; setting the commit author does not sign commits.
+Unlike `cat`, this workflow does not check out the repository or request write
+permissions for the built-in token; Renovate fetches its repository through the
+App token. It runs only on `main`, disables package scripts, and receives no
+registry credential because the tracked images are public. The existing update
+approval and merge policies remain in `renovate.json`.

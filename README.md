@@ -167,8 +167,8 @@ available only during downloads and is absent from the final image.
 ### Running dependency updates
 
 The `Renovate` workflow runs daily and can also be started manually from GitHub
-Actions. Follow [the runner setup](.github/RENOVATE.md) to configure
-`RENOVATE_TOKEN` and disable the hosted Renovate App for this repository before
+Actions. Follow [the runner setup](.github/RENOVATE.md) to configure the GitHub App
+credentials and disable the hosted Renovate App for this repository before
 the first run. Existing dependency groups, major-update approvals and merge
 policies remain in `renovate.json`; update commits use Conventional Commits.
 
