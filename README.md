@@ -175,9 +175,9 @@ runtime tests pass. It publishes:
   and `stable` aliases for published stable releases.
 
 Edge versions use the short source commit; release versions come from the GitHub
-tag, without its optional `v` prefix. The source config stays at `dev`. The next
-stable release is planned as `v0.5.5`. For a beta, publish a prerelease such as
-`v0.5.5-rc.1`. An admin release alone does not release the add-on.
+tag, without its optional `v` prefix. The source config stays at `dev`. Release Drafter proposes the next
+version from PR labels. Publish its tag as a stable release or use a prerelease
+tag such as `v1.0.0-rc.1` for a beta. An admin release alone does not release the add-on.
 
 The deployment workflow uses `GITHUB_TOKEN` with `packages: write` for GHCR;
 Docker Hub credentials are no longer used. After first publication, make the
