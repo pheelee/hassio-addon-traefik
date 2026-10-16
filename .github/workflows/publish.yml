@@ -11,7 +11,22 @@ on:
 permissions: {}
 
 jobs:
+  source:
+    name: Validate publishing source
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Require reviewed main history before privileged jobs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I scripts/check-release-source.py
   catalog:
+    needs: source
     name: Check catalog integration
     runs-on: ubuntu-24.04
     permissions: {}
@@ -35,7 +50,7 @@ jobs:
       contents: read
     uses: ./.github/workflows/build.yml
   deploy:
-    needs: [catalog, ci, smoke]
+    needs: [source, catalog, ci, smoke]
     permissions:
       contents: read
       packages: write
