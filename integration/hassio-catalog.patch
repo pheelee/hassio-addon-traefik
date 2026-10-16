@@ -1,0 +1,537 @@
+From d6ed8bddc62e071ade8e9331fd7723499bcc13f0 Mon Sep 17 00:00:00 2001
+From: pheelee <pri@irbe.ch>
+Date: Fri, 16 Oct 2026 05:24:46 +0000
+Subject: [PATCH 1/2] Integrate community updater for Traefik release channels
+
+---
+ .apps.yml                            | 27 +++++++++
+ .github/workflows/traefik-ci.yml     | 29 +++++++++
+ .github/workflows/traefik-update.yml | 45 ++++++++++++++
+ .gitignore                           |  1 +
+ .yamllint                            | 60 +++++++++++++++++++
+ TRAEFIK-MAINTENANCE.md               | 44 ++++++++++++++
+ scripts/requirements.txt             |  1 +
+ scripts/update-traefik.py            | 89 ++++++++++++++++++++++++++++
+ tests/test_traefik_update.py         | 49 +++++++++++++++
+ traefik-beta/config.json             |  1 +
+ traefik/config.json                  |  1 +
+ 11 files changed, 347 insertions(+)
+ create mode 100644 .apps.yml
+ create mode 100644 .github/workflows/traefik-ci.yml
+ create mode 100644 .github/workflows/traefik-update.yml
+ create mode 100644 .gitignore
+ create mode 100644 .yamllint
+ create mode 100644 TRAEFIK-MAINTENANCE.md
+ create mode 100644 scripts/requirements.txt
+ create mode 100644 scripts/update-traefik.py
+ create mode 100644 tests/test_traefik_update.py
+
+diff --git a/.apps.yml b/.apps.yml
+new file mode 100644
+index 0000000..f643481
+--- /dev/null
++++ b/.apps.yml
+@@ -0,0 +1,27 @@
++---
++# The stable manifest also works with the unmodified community repository-updater CLI.
++channel: stable
++apps:
++  traefik:
++    repository: pheelee/hassio-addon-traefik
++    target: traefik
++    image: ghcr.io/pheelee/traefik/{arch}
++
++# Keep this catalog's existing stable/beta installation URLs and add an edge entry.
++# The workflow adapter selects one of these manifests for the community updater.
++channels:
++  stable:
++    traefik:
++      repository: pheelee/hassio-addon-traefik
++      target: traefik
++      image: ghcr.io/pheelee/traefik/{arch}
++  beta:
++    traefik-beta:
++      repository: pheelee/hassio-addon-traefik
++      target: traefik
++      image: ghcr.io/pheelee/traefik/{arch}
++  edge:
++    traefik-edge:
++      repository: pheelee/hassio-addon-traefik
++      target: traefik
++      image: ghcr.io/pheelee/traefik/{arch}
+diff --git a/.github/workflows/traefik-ci.yml b/.github/workflows/traefik-ci.yml
+new file mode 100644
+index 0000000..eb86898
+--- /dev/null
++++ b/.github/workflows/traefik-ci.yml
+@@ -0,0 +1,29 @@
++---
++name: Traefik updater CI
++
++# yamllint disable-line rule:truthy
++on:
++  pull_request:
++    paths:
++      [".apps.yml", ".github/workflows/traefik-*.yml", "scripts/**", "tests/**"]
++  workflow_dispatch:
++
++permissions:
++  contents: read
++
++concurrency:
++  group: updater-ci-${{ github.event.pull_request.number || github.ref }}
++  cancel-in-progress: true
++
++jobs:
++  test:
++    runs-on: ubuntu-24.04
++    steps:
++      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
++        with:
++          persist-credentials: false
++      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
++        with:
++          python-version: "3.14"
++      - run: python -m pip install -r scripts/requirements.txt
++      - run: python -m unittest discover -s tests -v
+diff --git a/.github/workflows/traefik-update.yml b/.github/workflows/traefik-update.yml
+new file mode 100644
+index 0000000..888e857
+--- /dev/null
++++ b/.github/workflows/traefik-update.yml
+@@ -0,0 +1,45 @@
++---
++name: Update Traefik catalog
++
++# yamllint disable-line rule:truthy
++on:
++  repository_dispatch:
++    types: [update]
++  workflow_dispatch:
++    inputs:
++      channel:
++        description: Catalog channel to refresh
++        type: choice
++        options: [stable, beta, edge]
++        default: stable
++
++permissions:
++  contents: read
++
++concurrency:
++  group: traefik-catalog-updater
++  cancel-in-progress: false
++
++jobs:
++  update:
++    runs-on: ubuntu-24.04
++    steps:
++      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
++        with:
++          persist-credentials: false
++      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
++        with:
++          python-version: "3.14"
++      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
++      - name: Install community repository updater
++        run: python -m pip install -r scripts/requirements.txt
++      - name: Update published Traefik entries
++        env:
++          UPDATER_TOKEN: ${{ secrets.UPDATER_TOKEN }}
++          GIT_AUTHOR_NAME: pheelee
++          GIT_AUTHOR_EMAIL: pri@irbe.ch
++          GIT_COMMITTER_NAME: pheelee
++          GIT_COMMITTER_EMAIL: pri@irbe.ch
++        run: |
++          test -n "$UPDATER_TOKEN" || { echo 'Configure the UPDATER_TOKEN repository secret.' >&2; exit 1; }
++          python scripts/update-traefik.py
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..c18dd8d
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1 @@
++__pycache__/
+diff --git a/.yamllint b/.yamllint
+new file mode 100644
+index 0000000..8ef0d2e
+--- /dev/null
++++ b/.yamllint
+@@ -0,0 +1,60 @@
++---
++rules:
++  braces:
++    level: error
++    min-spaces-inside: 0
++    max-spaces-inside: 1
++    min-spaces-inside-empty: -1
++    max-spaces-inside-empty: -1
++  brackets:
++    level: error
++    min-spaces-inside: 0
++    max-spaces-inside: 0
++    min-spaces-inside-empty: -1
++    max-spaces-inside-empty: -1
++  colons:
++    level: error
++    max-spaces-before: 0
++    max-spaces-after: 1
++  commas:
++    level: error
++    max-spaces-before: 0
++    min-spaces-after: 1
++    max-spaces-after: 1
++  comments:
++    level: error
++    require-starting-space: true
++    min-spaces-from-content: 1
++  comments-indentation:
++    level: error
++  document-end:
++    level: error
++    present: false
++  document-start:
++    level: error
++    present: true
++  empty-lines:
++    level: error
++    max: 1
++    max-start: 0
++    max-end: 1
++  hyphens:
++    level: error
++    max-spaces-after: 1
++  indentation:
++    level: error
++    spaces: 2
++    indent-sequences: true
++    check-multi-line-strings: false
++  key-duplicates:
++    level: error
++  line-length: disable
++  new-line-at-end-of-file:
++    level: error
++  new-lines:
++    level: error
++    type: unix
++  trailing-spaces:
++    level: error
++  truthy:
++    level: error
+diff --git a/TRAEFIK-MAINTENANCE.md b/TRAEFIK-MAINTENANCE.md
+new file mode 100644
+index 0000000..461d7ce
+--- /dev/null
++++ b/TRAEFIK-MAINTENANCE.md
+@@ -0,0 +1,44 @@
++# Traefik release automation
++
++The source lives in `pheelee/hassio-addon-traefik`, following Home Assistant
++Community Apps' shared CI and deployment workflows. This catalog uses the
++community `repository-updater==2.0.1` library. A small adapter selects stable,
++beta or edge within this existing repository instead of requiring three catalog
++repositories. It preserves unrelated add-ons and this repository's README.
++
++The `.apps.yml` stable manifest remains compatible with the upstream CLI.
++Its `channels` extension maps stable to `traefik`, beta to the existing
++`traefik-beta`, and edge to `traefik-edge`. Beta and edge receive distinct slugs
++and names so installations in this single catalog do not collide.
++
++The source's pinned deployment workflow dispatches `update` events here after
++successful GHCR publishing. Only events naming `traefik` and the expected source
++repository are accepted. Main builds refresh edge, prereleases refresh beta,
++and stable releases refresh both stable and beta. The updater checks that the
++selected version's multi-architecture image exists before advertising it.
++
++Before merging the source pipeline, merge this integration and configure:
++
++- `DISPATCH_TOKEN` in the source repository: Contents write permission here,
++  needed by the shared deployment's repository-dispatch action.
++- `UPDATER_TOKEN` here: Contents write here and read access to the public source,
++  needed by the community updater to commit and push catalog changes.
++
++One appropriately scoped personal access token can supply both repository secrets.
++Enter it in GitHub Settings → Secrets and variables → Actions; never commit it.
++The updater runs as that token's account, with commits attributed to
++`pheelee <pri@irbe.ch>`. It follows the upstream updater's direct-push behavior;
++repository rules must permit those automated updates.
++
++After the source's first GHCR publication, make its Traefik packages public in
++GitHub package settings so Home Assistant can download without credentials.
++To retry a channel, run **Update Traefik catalog** with `stable`, `beta` or `edge`.
++The first new stable release is planned as `v0.5.5`. Until it exists, the existing
++catalog versions and images remain unchanged by this PR; only missing source
++URL metadata is added to the existing entries for updater compatibility.
++
++ARMv7 is retired by that release, matching the current community pipeline.
++Users must move to supported amd64/aarch64 installations before upgrading.
++
++Run `python -m pip install -r scripts/requirements.txt` and
++`python -m unittest discover -s tests -v` to validate dispatch/channel selection.
+diff --git a/scripts/requirements.txt b/scripts/requirements.txt
+new file mode 100644
+index 0000000..e805b01
+--- /dev/null
++++ b/scripts/requirements.txt
+@@ -0,0 +1 @@
++repository-updater==2.0.1
+diff --git a/scripts/update-traefik.py b/scripts/update-traefik.py
+new file mode 100644
+index 0000000..8519066
+--- /dev/null
++++ b/scripts/update-traefik.py
+@@ -0,0 +1,89 @@
++#!/usr/bin/env python3
++"""Use the community updater with stable/beta/edge entries in one catalog."""
++import json
++import os
++from pathlib import Path
++import re
++import subprocess
++
++import yaml
++from repositoryupdater.github import GitHub
++from repositoryupdater.app import App
++from repositoryupdater.repository import Repository
++
++SOURCE = "pheelee/hassio-addon-traefik"
++CATALOG = "pheelee/hassio"
++
++
++def select_channels(event, github):
++    """Treat dispatch payloads as untrusted; accept only our app and real tags."""
++    if "client_payload" not in event:
++        channel = event.get("inputs", {}).get("channel", "stable")
++        if channel not in ("stable", "beta", "edge"):
++            raise ValueError("Unknown catalog channel")
++        return [channel]
++    payload = event["client_payload"]
++    if payload.get("app") != "traefik" or payload.get("repository") != SOURCE:
++        raise ValueError("Only the Traefik source repository is accepted")
++    version = payload.get("version", "")
++    if re.fullmatch(r"[a-f0-9]{7}", version):
++        return ["edge"]
++    if not re.fullmatch(r"v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", version):
++        raise ValueError("Invalid version in repository dispatch")
++    release = github.get_repo(SOURCE).get_release(version)
++    if release.draft:
++        raise ValueError("Draft releases cannot be published")
++    return ["beta"] if release.prerelease else ["stable", "beta"]
++
++
++class CatalogRepository(Repository):
++    def __init__(self, *args, channel, **kwargs):
++        super().__init__(*args, **kwargs)
++        self.selected_channel = channel
++
++    def load_repository(self, app_filter):
++        manifest = yaml.safe_load(self.github_repository.get_contents(".apps.yml").decoded_content)
++        self.channel = self.selected_channel
++        for target, config in manifest["channels"][self.channel].items():
++            self.apps.append(App(self.github, self.git_repo, target, config["image"],
++                                 self.github.get_repo(config["repository"]),
++                                 config["target"], self.channel, True))
++
++    def update_app(self, app):
++        app.update()
++        if app.channel != "stable":
++            path = Path(self.git_repo.working_dir) / app.repository_target / "config.json"
++            config = json.loads(path.read_text())
++            config["slug"] = app.repository_target
++            config["name"] = f"Traefik ({app.channel.title()})"
++            path.write_text(json.dumps(config, indent=2) + "\n")
++        return self.commit_changes(f"Update {app.repository_target} to {app.current_version}")
++
++    def generate_readme(self):
++        # This repository also contains independently maintained, unrelated add-ons.
++        # Preserve its hand-maintained README; the updater still generates app docs.
++        return
++
++
++def main():
++    if os.environ["GITHUB_REPOSITORY"] != CATALOG:
++        raise ValueError("This updater is restricted to the pheelee/hassio catalog")
++    github = GitHub(os.environ["UPDATER_TOKEN"])
++    event = json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text())
++    for channel in select_channels(event, github):
++        repository = CatalogRepository(github, CATALOG, None, force=False, channel=channel)
++        try:
++            # An app's latest source can advance while an older deployment finishes.
++            # Do not advertise a version until its complete multi-arch image exists.
++            for app in repository.apps:
++                version = app.latest_version
++                image = app.image.replace("/{arch}", "")
++                subprocess.run(["docker", "buildx", "imagetools", "inspect", f"{image}:{version}"],
++                               check=True, stdout=subprocess.DEVNULL)
++            repository.update()
++        finally:
++            repository.cleanup()
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/tests/test_traefik_update.py b/tests/test_traefik_update.py
+new file mode 100644
+index 0000000..74cc918
+--- /dev/null
++++ b/tests/test_traefik_update.py
+@@ -0,0 +1,49 @@
++import importlib.util
++from pathlib import Path
++import unittest
++from unittest.mock import Mock
++
++spec = importlib.util.spec_from_file_location("updater", Path(__file__).resolve().parents[1] / "scripts/update-traefik.py")
++updater = importlib.util.module_from_spec(spec)
++spec.loader.exec_module(updater)
++
++
++class ChannelTests(unittest.TestCase):
++    def event(self, version):
++        return {"client_payload": {"app": "traefik", "repository": updater.SOURCE, "version": version}}
++
++    def test_edge_dispatch(self):
++        github = Mock()
++        self.assertEqual(updater.select_channels(self.event("abcdef1"), github), ["edge"])
++        github.get_repo.assert_not_called()
++
++    def test_stable_refreshes_beta_too(self):
++        github = Mock()
++        github.get_repo.return_value.get_release.return_value = Mock(draft=False, prerelease=False)
++        self.assertEqual(updater.select_channels(self.event("v0.5.5"), github), ["stable", "beta"])
++
++    def test_prerelease_only_refreshes_beta(self):
++        github = Mock()
++        github.get_repo.return_value.get_release.return_value = Mock(draft=False, prerelease=True)
++        self.assertEqual(updater.select_channels(self.event("v0.5.5-rc.1"), github), ["beta"])
++
++    def test_draft_rejected(self):
++        github = Mock()
++        github.get_repo.return_value.get_release.return_value = Mock(draft=True)
++        with self.assertRaises(ValueError):
++            updater.select_channels(self.event("v0.5.5"), github)
++
++    def test_untrusted_source_rejected(self):
++        event = self.event("v0.5.5")
++        event["client_payload"]["repository"] = "someone/else"
++        with self.assertRaises(ValueError):
++            updater.select_channels(event, Mock())
++
++    def test_unsafe_version_rejected(self):
++        with self.assertRaises(ValueError):
++            updater.select_channels(self.event("../../main"), Mock())
++
++    def test_manual_channel_validation(self):
++        self.assertEqual(updater.select_channels({"inputs": {"channel": "edge"}}, Mock()), ["edge"])
++        with self.assertRaises(ValueError):
++            updater.select_channels({"inputs": {"channel": "unknown"}}, Mock())
+diff --git a/traefik-beta/config.json b/traefik-beta/config.json
+index ad5dece..ca3e48f 100644
+--- a/traefik-beta/config.json
++++ b/traefik-beta/config.json
+@@ -3,6 +3,7 @@
+     "version": "0.5.2",
+     "slug": "traefik-beta",
+     "description": "Reverse Proxy for Web Services",
++    "url": "https://github.com/pheelee/hassio-addon-traefik",
+     "arch": ["armv7", "aarch64", "amd64"],
+     "startup": "system",
+     "boot": "auto",
+diff --git a/traefik/config.json b/traefik/config.json
+index d7c1b7f..4726593 100644
+--- a/traefik/config.json
++++ b/traefik/config.json
+@@ -3,6 +3,7 @@
+     "version": "0.5.1",
+     "slug": "traefik",
+     "description": "Reverse Proxy for Web Services",
++    "url": "https://github.com/pheelee/hassio-addon-traefik",
+     "arch": ["armv7", "aarch64", "amd64"],
+     "startup": "system",
+     "boot": "auto",
+-- 
+2.52.0
+
+
+From aa2bb13b6566d8dd2fa804c9bad6e739d1744862 Mon Sep 17 00:00:00 2001
+From: pheelee <pri@irbe.ch>
+Date: Fri, 16 Oct 2026 05:27:21 +0000
+Subject: [PATCH 2/2] Validate community updater configuration generation for
+ all channels
+
+---
+ scripts/update-traefik.py    |  8 +++++---
+ tests/test_traefik_update.py | 32 ++++++++++++++++++++++++++++++++
+ 2 files changed, 37 insertions(+), 3 deletions(-)
+
+diff --git a/scripts/update-traefik.py b/scripts/update-traefik.py
+index 8519066..926b6d0 100644
+--- a/scripts/update-traefik.py
++++ b/scripts/update-traefik.py
+@@ -52,11 +52,13 @@ class CatalogRepository(Repository):
+     def update_app(self, app):
+         app.update()
+         if app.channel != "stable":
+-            path = Path(self.git_repo.working_dir) / app.repository_target / "config.json"
+-            config = json.loads(path.read_text())
++            directory = Path(self.git_repo.working_dir) / app.repository_target
++            path = next(path for path in (directory / "config.yaml", directory / "config.json") if path.exists())
++            config = yaml.safe_load(path.read_text())
+             config["slug"] = app.repository_target
+             config["name"] = f"Traefik ({app.channel.title()})"
+-            path.write_text(json.dumps(config, indent=2) + "\n")
++            path.write_text((json.dumps(config, indent=2) + "\n") if path.suffix == ".json"
++                            else yaml.safe_dump(config, sort_keys=False))
+         return self.commit_changes(f"Update {app.repository_target} to {app.current_version}")
+ 
+     def generate_readme(self):
+diff --git a/tests/test_traefik_update.py b/tests/test_traefik_update.py
+index 74cc918..e02527e 100644
+--- a/tests/test_traefik_update.py
++++ b/tests/test_traefik_update.py
+@@ -1,6 +1,10 @@
+ import importlib.util
+ from pathlib import Path
+ import unittest
++import json
++import tempfile
++from types import SimpleNamespace
++import yaml
+ from unittest.mock import Mock
+ 
+ spec = importlib.util.spec_from_file_location("updater", Path(__file__).resolve().parents[1] / "scripts/update-traefik.py")
+@@ -47,3 +51,31 @@ class ChannelTests(unittest.TestCase):
+         self.assertEqual(updater.select_channels({"inputs": {"channel": "edge"}}, Mock()), ["edge"])
+         with self.assertRaises(ValueError):
+             updater.select_channels({"inputs": {"channel": "unknown"}}, Mock())
++
++
++class LibraryIntegrationTests(unittest.TestCase):
++    def test_upstream_generated_config_keeps_distinct_channel_slugs(self):
++        for channel, target in (("stable", "traefik"), ("beta", "traefik-beta"), ("edge", "traefik-edge")):
++            with self.subTest(channel=channel), tempfile.TemporaryDirectory() as source, tempfile.TemporaryDirectory() as catalog:
++                source_app = Path(source) / "traefik"
++                source_app.mkdir()
++                (source_app / "config.yaml").write_text(yaml.safe_dump({
++                    "name": "Traefik", "slug": "traefik", "version": "dev", "arch": ["amd64", "aarch64"]}))
++                (Path(catalog) / target).mkdir()
++                app = object.__new__(updater.App)
++                app.repository = SimpleNamespace(working_dir=catalog)
++                app.git_repo = SimpleNamespace(working_dir=source)
++                app.app_target = "traefik"
++                app.repository_target = target
++                app.current_version = "0.5.5"
++                app.channel = channel
++                app.image = "ghcr.io/pheelee/traefik/{arch}"
++                app.update = app.generate_app_config
++                repository = object.__new__(updater.CatalogRepository)
++                repository.git_repo = SimpleNamespace(working_dir=catalog)
++                repository.commit_changes = Mock(return_value=True)
++                self.assertTrue(repository.update_app(app))
++                result = yaml.safe_load((Path(catalog) / target / "config.yaml").read_text())
++                self.assertEqual(result["slug"], target)
++                self.assertEqual(result["version"], "0.5.5")
++                self.assertEqual(result["image"], "ghcr.io/pheelee/traefik/{arch}")
+-- 
+2.52.0
+
