@@ -2,7 +2,12 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
   "dependencyDashboard": true,
-  "enabledManagers": ["dockerfile", "github-actions", "custom.regex"],
+  "enabledManagers": [
+    "dockerfile",
+    "github-actions",
+    "custom.regex",
+    "pip_requirements"
+  ],
   "customManagers": [
     {
       "customType": "regex",
@@ -15,9 +20,9 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^traefik/build\\.json$/"],
+      "managerFilePatterns": ["/^traefik/build\\.yaml$/"],
       "matchStrings": [
-        "\"(?<depName>ghcr\\.io/hassio-addons/base):(?<currentValue>[0-9.]+)\""
+        "(?:aarch64|amd64):\\s+(?<depName>ghcr\\.io/hassio-addons/base):(?<currentValue>[0-9.]+)"
       ],
       "datasourceTemplate": "docker"
     }
@@ -45,6 +50,11 @@
       "description": "Keep major upgrades explicit",
       "matchUpdateTypes": ["major"],
       "dependencyDashboardApproval": true
+    },
+    {
+      "matchManagers": ["pip_requirements"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
     }
   ],
   "rebaseWhen": "behind-base-branch",

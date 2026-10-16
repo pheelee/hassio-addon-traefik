@@ -114,7 +114,7 @@ Specifies a list of root CAs as base64 strings to import in traefik.
 ## Development and dependency updates
 
 The source layout, CI, maintenance and deployment follow Home Assistant Community
-Apps. Add-on files live in `traefik/`; source `config.json` uses `version: dev`.
+Apps. Add-on files live in `traefik/`; source `config.yaml` uses `version: dev`.
 Install published versions through [the Home Assistant catalog][repository],
 which supplies the actual version and GHCR image reference.
 
@@ -127,7 +127,7 @@ full PR check suite (including the `Test build` aggregate) passes. Major updates
 Renovate performs the merge after checks; platform automerge is disabled to avoid
 merging before CI has reported its result.
 
-`traefik/build.json` and the Dockerfile use the community base version. Base
+`traefik/build.yaml` and the Dockerfile use the community base version. Base
 references use version tags, matching the community linter's schema. Both
 upstream binary archives must pass their publisher's SHA-256 manifest before
 extraction. This packaging change does not resolve advisories in Traefik 2.9.6;
@@ -148,6 +148,7 @@ current Home Assistant architectures. Users of 32-bit installations must migrate
 to a supported 64-bit installation before upgrading this add-on.
 
 ```sh
+python3 -m pip install -r requirements-dev.txt
 python3 -m unittest discover -s tests -v
 base=$(python3 scripts/image-metadata.py amd64 | sed -n 's/^base=//p')
 docker buildx build --load --build-arg BUILD_FROM="$base" \

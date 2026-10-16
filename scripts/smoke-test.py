@@ -2,6 +2,7 @@
 """Boot the packaged add-on and exercise a real Traefik route without ACME/SSO."""
 import argparse
 import json
+import yaml
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import secrets
@@ -51,7 +52,7 @@ def main():
     parser.add_argument("--expected-version", required=True)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
-    options = json.loads((root / "traefik/config.json").read_text())["options"]
+    options = yaml.safe_load((root / "traefik/config.yaml").read_text())["options"]
     options.update(email="smoke@example.invalid", cookieSecret=secrets.token_hex(32))
     class SupervisorOptions(BaseHTTPRequestHandler):
         def do_GET(self):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read the community build contract; source config stays at version 'dev'."""
 from datetime import datetime, timezone
-import json
+import yaml
 import os
 from pathlib import Path
 import re
@@ -12,8 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def metadata(arch, release_tag="", prerelease=False):
-    config = json.loads((ROOT / "traefik/config.json").read_text())
-    bases = json.loads((ROOT / "traefik/build.json").read_text())["build_from"]
+    config = yaml.safe_load((ROOT / "traefik/config.yaml").read_text())
+    bases = yaml.safe_load((ROOT / "traefik/build.yaml").read_text())["build_from"]
     if config["version"] != "dev" or set(config["arch"]) != set(bases):
         raise ValueError("Community source config must use version dev and matching base architectures")
     if arch not in bases:

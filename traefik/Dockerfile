@@ -1,5 +1,5 @@
 ARG BUILD_FROM=ghcr.io/hassio-addons/base:21.0.8
-# BUILD_FROM is versioned above and in build.json.
+# BUILD_FROM is versioned above and in build.yaml.
 # hadolint ignore=DL3006
 FROM ${BUILD_FROM}
 
