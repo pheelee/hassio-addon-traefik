@@ -1,18 +1,48 @@
-name: Publish
+---
+name: Deploy
 
+# yamllint disable-line rule:truthy
 on:
+  push:
+    branches: [main]
   release:
     types: [published]
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
-  publish:
+  catalog:
+    name: Check catalog integration
+    runs-on: ubuntu-24.04
+    permissions: {}
+    steps:
+      - name: Require a configured catalog receiver and dispatch token
+        env:
+          GH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN" || { echo 'Configure the DISPATCH_TOKEN repository secret.' >&2; exit 1; }
+          gh api repos/pheelee/hassio/contents/.apps.yml --silent
+          gh api repos/pheelee/hassio/contents/.github/workflows/traefik-update.yml --silent
+  ci:
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+    uses: hassio-addons/workflows/.github/workflows/app-ci.yaml@e0c532a7b0fb264b3ff0c718c2c0308a0c8c1390 # v4.0.0
+  smoke: # zizmor: ignore[self-repository] -- Keep actionlint-compatible local workflow syntax.
+    permissions:
+      contents: read
     uses: ./.github/workflows/build.yml
+  deploy:
+    needs: [catalog, ci, smoke]
+    permissions:
+      contents: read
+      packages: write
+    uses: hassio-addons/workflows/.github/workflows/app-deploy.yaml@e0c532a7b0fb264b3ff0c718c2c0308a0c8c1390 # v4.0.0
     with:
-      publish: true
-      release_tag: ${{ github.event.release.tag_name }}
+      repository: hassio
+      repository_beta: hassio
+      repository_edge: hassio
     secrets:
-      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+      DISPATCH_TOKEN: ${{ secrets.DISPATCH_TOKEN }}

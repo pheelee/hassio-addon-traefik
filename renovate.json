@@ -3,33 +3,52 @@
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
   "dependencyDashboard": true,
   "enabledManagers": ["dockerfile", "github-actions", "custom.regex"],
-  "automerge": false,
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^Dockerfile$/"],
-      "matchStrings": ["# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+_VERSION=(?<currentValue>\\S+)"],
+      "managerFilePatterns": ["/^traefik/Dockerfile$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+_VERSION=(?<currentValue>\\S+)"
+      ],
       "extractVersionTemplate": "^v(?<version>.*)$",
       "versioningTemplate": "semver"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["/^build\\.json$/"],
-      "matchStrings": ["\"(?<depName>ghcr\\.io/home-assistant/[^\"]+):(?<currentValue>[0-9.]+)@(?<currentDigest>sha256:[a-f0-9]+)\""],
+      "managerFilePatterns": ["/^traefik/build\\.json$/"],
+      "matchStrings": [
+        "\"(?<depName>ghcr\\.io/hassio-addons/base):(?<currentValue>[0-9.]+)\""
+      ],
       "datasourceTemplate": "docker"
     }
   ],
   "packageRules": [
     {
-      "description": "Review compatibility before any major dependency upgrade",
-      "matchUpdateTypes": ["major"],
-      "dependencyDashboardApproval": true
+      "description": "Keep base versions consistent across supported architectures",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["ghcr.io/hassio-addons/base"],
+      "groupName": "App base image"
     },
     {
-      "description": "Keep base versions and digests consistent across all architectures",
+      "description": "Community policy: automatically merge compatible base updates after CI",
       "matchDatasources": ["docker"],
-      "matchPackageNames": ["/^ghcr\\.io/home-assistant/.*-base$/"],
-      "groupName": "Home Assistant base images"
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "description": "Community policy: automatically merge compatible upstream application updates after CI",
+      "matchDatasources": ["github-releases"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "description": "Keep major upgrades explicit",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
     }
-  ]
+  ],
+  "rebaseWhen": "behind-base-branch",
+  "labels": ["dependencies", "no-stale"],
+  "commitMessagePrefix": "\u2b06\ufe0f",
+  "platformAutomerge": false
 }

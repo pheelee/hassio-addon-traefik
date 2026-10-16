@@ -1,0 +1,54 @@
+#!/usr/bin/with-contenv bashio
+
+mkdir -p /data/dynamic.d
+ACME_EMAIL=$(bashio::config 'email')
+LOGLEVEL=$(bashio::config 'loglevel')
+ARGS=(
+    "--log.level=$LOGLEVEL"
+    --providers.file.directory=/data/dynamic.d
+    --entryPoints.web.address=:80
+    --entryPoints.websecure.address=:443
+    "--certificatesresolvers.http01.acme.email=$ACME_EMAIL"
+    --certificatesresolvers.http01.acme.storage=/data/acme.json
+    --certificatesresolvers.http01.acme.httpchallenge.entrypoint=web
+)
+
+if bashio::config.true 'insecureSkipVerify'; then
+    ARGS+=(--serversTransport.insecureSkipVerify=true)
+fi
+
+rm -rf /data/cacerts
+mkdir -p /data/cacerts
+CERTS=()
+i=0
+while IFS= read -r certificate; do
+    printf '%s' "$certificate" | base64 -d > "/data/cacerts/ca$i.crt"
+    CERTS+=("/data/cacerts/ca$i.crt")
+    i=$((i + 1))
+done < <(bashio::config 'rootCAs')
+if ((${#CERTS[@]})); then
+    CERT_PATHS=$(IFS=,; printf '%s' "${CERTS[*]}")
+    ARGS+=("--serversTransport.rootCAs=$CERT_PATHS")
+fi
+
+# Keep values containing spaces or '=' intact; each entry is KEY=VALUE.
+while IFS= read -r setting; do
+    [[ "$setting" == *=* ]] || continue
+    key=${setting%%=*}
+    if [[ ! "$key" =~ ^[a-zA-Z_][a-zA-Z_0-9]*$ ]]; then
+        bashio::log.fatal "Invalid environment variable name"
+        exit 1
+    fi
+    export "$key=${setting#*=}"
+done < <(bashio::config 'environment')
+
+if [[ -n "${DNS_PROVIDER:-}" ]]; then
+    ARGS+=(
+        "--certificatesresolvers.dns01.acme.email=$ACME_EMAIL"
+        --certificatesresolvers.dns01.acme.storage=/data/acme.json
+        "--certificatesresolvers.dns01.acme.dnschallenge.provider=$DNS_PROVIDER"
+        --certificatesresolvers.dns01.acme.dnschallenge.delaybeforecheck=2
+    )
+fi
+
+exec traefik "${ARGS[@]}"

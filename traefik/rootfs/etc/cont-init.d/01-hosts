@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bashio
+
+while IFS= read -r host; do
+    printf '%s\n' "$host" >> /etc/hosts
+done < <(bashio::config 'hosts')

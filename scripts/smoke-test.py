@@ -51,7 +51,7 @@ def main():
     parser.add_argument("--expected-version", required=True)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
-    options = json.loads((root / "config.json").read_text())["options"]
+    options = json.loads((root / "traefik/config.json").read_text())["options"]
     options.update(email="smoke@example.invalid", cookieSecret=secrets.token_hex(32))
     class SupervisorOptions(BaseHTTPRequestHandler):
         def do_GET(self):

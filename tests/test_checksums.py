@@ -4,7 +4,7 @@ import subprocess
 import tempfile
 import unittest
 
-VERIFY = Path(__file__).resolve().parents[1] / "scripts/verify-sha256.sh"
+VERIFY = Path(__file__).resolve().parents[1] / "traefik/scripts/verify-sha256.sh"
 
 
 class ChecksumTests(unittest.TestCase):

@@ -1,7 +1,0 @@
-{
-  "build_from": {
-    "amd64": "ghcr.io/home-assistant/amd64-base:3.22@sha256:979a9eae68f21d2dc09f3d8a119590e3b565d673115faaf96874dbc864502213",
-    "aarch64": "ghcr.io/home-assistant/aarch64-base:3.22@sha256:791bc7dac89a76cf3314b8dd995db11b6207109a9bb5c4cc2eaeca3fed37abf4",
-    "armv7": "ghcr.io/home-assistant/armv7-base:3.22@sha256:ae2b8be31fee7bd01078d5ca51e7c48aa323ccbaca8085420a416e354b101246"
-  }
-}

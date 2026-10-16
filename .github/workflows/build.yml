@@ -1,32 +1,28 @@
-name: Build images
+---
+name: Runtime validation
 
+# yamllint disable-line rule:truthy
 on:
   workflow_call:
-    inputs:
-      publish:
-        type: boolean
-        default: false
-      release_tag:
-        type: string
-        default: ''
-    secrets:
-      DOCKERHUB_USERNAME:
-        required: false
-      DOCKERHUB_TOKEN:
-        required: false
 
 permissions:
   contents: read
+
+concurrency:
+  group: smoke-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Test checksum verification
+        with:
+          persist-credentials: false
+      - name: Test checksum and packaging contracts
         run: python3 -m unittest discover -s tests -v
-  build:
-    name: Build and smoke test (${{ matrix.arch }})
+  smoke:
+    name: Runtime (${{ matrix.arch }})
     needs: verify
     runs-on: ${{ matrix.runner }}
     strategy:
@@ -39,84 +35,39 @@ jobs:
           - arch: aarch64
             platform: linux/arm64
             runner: ubuntu-24.04-arm
-          - arch: armv7
-            platform: linux/arm/v7
-            runner: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Read image metadata and validate release version
+        with:
+          persist-credentials: false
+      - name: Read image metadata
         id: metadata
         env:
           BUILD_ARCH: ${{ matrix.arch }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
         run: python3 scripts/image-metadata.py "$BUILD_ARCH" "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-      - name: Set up ARMv7 emulation
-        if: matrix.arch == 'armv7'
-        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-        with:
-          platforms: arm
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      - name: Build test image
+      - name: Build runtime test image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: .
+          context: traefik
           platforms: ${{ matrix.platform }}
-          build-args: BUILD_FROM=${{ steps.metadata.outputs.base }}
+          build-args: |
+            BUILD_FROM=${{ steps.metadata.outputs.base }}
+            BUILD_ARCH=${{ matrix.arch }}
+            BUILD_VERSION=${{ steps.metadata.outputs.version }}
+            BUILD_REF=${{ github.sha }}
+            BUILD_REPOSITORY=${{ github.repository }}
+            BUILD_DATE=${{ steps.metadata.outputs.build_date }}
           load: true
           tags: traefik-addon-test:${{ matrix.arch }}
-          cache-from: type=gha,scope=${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
-      - name: Boot add-on and test routing
+          cache-from: type=gha,scope=smoke-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=smoke-${{ matrix.arch }}
+      - name: Verify metadata and test routing
         env:
           BUILD_ARCH: ${{ matrix.arch }}
           ADMIN_VERSION: ${{ steps.metadata.outputs.admin_version }}
-        run: python3 scripts/smoke-test.py "traefik-addon-test:$BUILD_ARCH" --expected-version "$ADMIN_VERSION"
-      - name: Save tested release image
-        if: inputs.publish
-        env:
-          BUILD_ARCH: ${{ matrix.arch }}
-        run: docker save "traefik-addon-test:$BUILD_ARCH" | gzip > /tmp/tested-image.tar.gz
-      - name: Retain tested release image
-        if: inputs.publish
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: tested-image-${{ matrix.arch }}
-          path: /tmp/tested-image.tar.gz
-          compression-level: 0
-          retention-days: 1
-  publish:
-    name: Publish (${{ matrix.arch }})
-    if: inputs.publish
-    needs: build
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        arch: [amd64, aarch64, armv7]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Read release metadata
-        id: metadata
-        env:
-          BUILD_ARCH: ${{ matrix.arch }}
-          RELEASE_TAG: ${{ inputs.release_tag }}
-        run: python3 scripts/image-metadata.py "$BUILD_ARCH" "$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: tested-image-${{ matrix.arch }}
-          path: /tmp/tested-image
-      - name: Load tested image
-        run: docker load --input /tmp/tested-image/tested-image.tar.gz
-      - name: Log in to Docker Hub
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Publish tested image
-        # Push the exact image that passed; all architectures must pass first.
-        env:
-          LOCAL_IMAGE: traefik-addon-test:${{ matrix.arch }}
-          PUBLISH_IMAGE: ${{ steps.metadata.outputs.image }}:${{ steps.metadata.outputs.version }}
+          BUILD_VERSION: ${{ steps.metadata.outputs.version }}
         run: |
-          docker tag "$LOCAL_IMAGE" "$PUBLISH_IMAGE"
-          docker push "$PUBLISH_IMAGE"
+          python3 scripts/check-image-metadata.py "traefik-addon-test:$BUILD_ARCH" "$BUILD_ARCH" "$BUILD_VERSION"
+          python3 scripts/smoke-test.py "traefik-addon-test:$BUILD_ARCH" --expected-version "$ADMIN_VERSION"

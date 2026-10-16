@@ -1,5 +1,16 @@
 ## v0.5.5
 
+### Breaking changes
+
+- Retire ARMv7; amd64 and aarch64 remain supported.
+- Move images to GHCR and adopt community edge/beta/stable release channels.
+
+### Changes
+
+- Adopt the pinned community CI/deployment, community base, lint/security checks,
+  selective Renovate automerge, release drafting, label automation and workflow hygiene.
+- Set and verify add-on/OCI image metadata instead of inheriting base metadata.
+
 - Update traefik-admin to v0.5.3 with security fixes and self-hosted icons.
 - Verify Traefik and admin release checksums before installing binaries.
 - Track upstream releases, pinned Home Assistant bases and GitHub Actions with Renovate.
@@ -11,6 +22,7 @@
 ### 🛠️ Fixes
 
 ### 🔨 Changes
+
 - Bump Traefik to v2.9.6
 
 ## v0.5.2
@@ -43,6 +55,7 @@
 ## v0.4.1
 
 ### 🛠️ Fixes
+
 - support multiple root ca's from config
 
 ## v0.4.0

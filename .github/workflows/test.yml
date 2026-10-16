@@ -1,20 +1,35 @@
-name: Test
+---
+name: CI
 
-on: [push, pull_request]
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+  workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
-  images:
+  community:
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+    uses: hassio-addons/workflows/.github/workflows/app-ci.yaml@e0c532a7b0fb264b3ff0c718c2c0308a0c8c1390 # v4.0.0
+  smoke: # zizmor: ignore[self-repository] -- Keep actionlint-compatible local workflow syntax.
+    permissions:
+      contents: read
     uses: ./.github/workflows/build.yml
   build:
     name: Test build
     if: always()
-    needs: images
+    needs: [community, smoke]
     runs-on: ubuntu-24.04
+    permissions: {}
     steps:
-      - name: Require every architecture to pass
+      - name: Require community CI and runtime checks
         env:
-          RESULT: ${{ needs.images.result }}
-        run: test "$RESULT" = success
+          COMMUNITY: ${{ needs.community.result }}
+          SMOKE: ${{ needs.smoke.result }}
+        run: test "$COMMUNITY" = success && test "$SMOKE" = success
