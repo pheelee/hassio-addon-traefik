@@ -4,7 +4,7 @@ ARG BUILD_FROM=ghcr.io/hassio-addons/base:21.0.8
 FROM ${BUILD_FROM}
 
 # renovate: datasource=github-releases depName=traefik/traefik
-ARG TRAEFIK_VERSION=2.11.59
+ARG TRAEFIK_VERSION=2.11.60
 # renovate: datasource=github-releases depName=pheelee/traefik-admin
 ARG TRAEFIK_ADMIN_VERSION=0.5.3
 
