@@ -187,7 +187,16 @@ starts. Version and channel handling stay in the shared workflow. It publishes:
 Edge versions use the short source commit; release versions come from the GitHub
 tag, without its optional `v` prefix. The source config stays at `dev`. Release Drafter proposes the next
 version from PR labels. Publish its tag as a stable release or use a prerelease
-tag such as `v1.0.0-rc.1` for a beta. An admin release alone does not release the add-on.
+tag such as `v0.6.0-rc.1` for a beta. An admin release alone does not release the add-on.
+
+During development, releases stay on `0.x`: breaking changes and new features
+advance the minor version (for example, `0.5.4` to `0.6.0`); compatible fixes and
+maintenance advance the patch version. Keep `breaking-change`/`major` labels and
+Conventional Commit breaking-change markers so users can identify migrations.
+Release notes list breaking changes explicitly. Adopting `1.0.0` is a deliberate
+maintainer decision; restore major-label resolution in
+`.github/release-drafter.yml` when making that transition. This policy controls
+draft suggestions; publishing still uses the release tag chosen by the maintainer.
 
 The deployment workflow uses `GITHUB_TOKEN` with `packages: write` for GHCR;
 Docker Hub credentials are no longer used. After first publication, make the

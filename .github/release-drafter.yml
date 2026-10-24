@@ -2,6 +2,8 @@
 name-template: "v$RESOLVED_VERSION"
 tag-template: "v$RESOLVED_VERSION"
 categories:
+  - title: "⚠️ Breaking changes"
+    labels: [breaking-change, major]
   - title: "🚀 Features"
     labels: [new-feature, enhancement]
   - title: "🛠️ Fixes"
@@ -11,10 +13,9 @@ categories:
   - title: "🧰 Maintenance"
     labels: [maintenance, ci, refactor, documentation, performance]
 version-resolver:
-  major:
-    labels: [breaking-change, major]
+  # Stay on 0.x during development. Restore major resolution before adopting 1.x.
   minor:
-    labels: [new-feature, minor]
+    labels: [breaking-change, major, new-feature, minor, enhancement]
   patch:
     labels:
       [
@@ -22,7 +23,6 @@ version-resolver:
         dependencies,
         maintenance,
         ci,
-        enhancement,
         documentation,
         refactor,
         performance,
