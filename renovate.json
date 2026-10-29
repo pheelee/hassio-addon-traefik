@@ -2,6 +2,8 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
   "dependencyDashboard": true,
+  "minimumReleaseAge": "7 days",
+  "minimumReleaseAgeBehaviour": "timestamp-required",
   "enabledManagers": [
     "dockerfile",
     "github-actions",
@@ -28,6 +30,13 @@
     }
   ],
   "packageRules": [
+    {
+      "description": "Allow our own traefik-admin releases without the third-party release delay",
+      "matchDatasources": ["github-releases"],
+      "matchPackageNames": ["pheelee/traefik-admin"],
+      "minimumReleaseAge": "0 days",
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
+    },
     {
       "description": "Keep base versions consistent across supported architectures",
       "matchDatasources": ["docker"],
